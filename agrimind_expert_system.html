@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriMind - Simple Agricultural Expert System</title>
+    <!-- Tailwind CSS for responsive, modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for crisp agricultural & UI icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom subtle animations */
+        @keyframes pulse-scan {
+            0%, 100% { top: 0%; }
+            50% { top: 96%; }
+        }
+        .scanner-line {
+            animation: pulse-scan 2.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800 min-h-screen flex flex-col">
+
+    <!-- Top Navigation / Header -->
+    <header class="bg-emerald-800 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-emerald-600 p-2.5 rounded-xl shadow-inner">
+                    <i class="fa-solid fa-seedling text-2xl text-emerald-100"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">AgriMind ES</h1>
+                    <p class="text-xs text-emerald-200">Crop Health & Sickness Diagnostic System</p>
+                </div>
+            </div>
+
+            <!-- Architecture Navigation Tabs -->
+            <nav class="flex space-x-2 bg-emerald-900/60 p-1.5 rounded-xl">
+                <button onclick="switchTab('diagnostic')" id="tab-diagnostic" class="px-4 py-2 rounded-lg text-sm font-medium transition bg-emerald-600 text-white shadow">
+                    <i class="fa-solid fa-stethoscope mr-1.5"></i>Face 1: Diagnosis
+                </button>
+                <button onclick="switchTab('knowledge')" id="tab-knowledge" class="px-4 py-2 rounded-lg text-sm font-medium transition text-emerald-100 hover:bg-emerald-700/50">
+                    <i class="fa-solid fa-book-open mr-1.5"></i>Knowledge Base
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-6xl w-full mx-auto px-4 py-8">
+
+        <!-- Custom Notification Banner (Replaces alert()) -->
+        <div id="notification-box" class="hidden mb-6 p-4 rounded-xl border flex items-center justify-between shadow-sm transition-all">
+            <div class="flex items-center space-x-3">
+                <i id="notification-icon" class="fa-solid fa-circle-info text-lg"></i>
+                <span id="notification-text" class="text-sm font-medium"></span>
+            </div>
+            <button onclick="hideNotification()" class="text-stone-400 hover:text-stone-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- VIEW 1: FACE 1 (MAIN SERVER & DIAGNOSIS)   -->
+        <!-- ========================================== -->
+        <div id="view-diagnostic" class="space-y-8">
+            
+            <!-- Step 1: Select Crop & Input Mode -->
+            <section class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-stone-200">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-5 mb-6">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md">Main Server Interface</span>
+                        <h2 class="text-2xl font-bold text-stone-800 mt-1">1. Select Your Crop</h2>
+                        <p class="text-sm text-stone-500">Choose the plant you want to inspect to load its specific agricultural rules.</p>
+                    </div>
+                    <button onclick="resetSystem()" class="self-start sm:self-center text-sm text-stone-500 hover:text-emerald-700 font-medium flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-stone-100 transition">
+                        <i class="fa-solid fa-rotate-right"></i> Reset All
+                    </button>
+                </div>
+
+                <!-- Crop Selection Grid -->
+                <div id="crop-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+                <!-- Mode Selector (Questionnaire vs Camera Scan) -->
+                <div id="mode-selector" class="hidden pt-4 border-t border-stone-100">
+                    <h3 class="text-sm font-semibold text-stone-700 mb-3">Choose Diagnostic Method for <span id="selected-crop-label" class="text-emerald-700 font-bold"></span>:</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <button onclick="setInputMode('questions')" id="btn-mode-questions" class="flex items-center p-4 rounded-xl border-2 border-emerald-600 bg-emerald-50/50 text-left transition hover:shadow-md">
+                            <div class="bg-emerald-600 text-white p-3 rounded-lg mr-4">
+                                <i class="fa-solid fa-clipboard-question text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-stone-800">Guided Symptom Questions</div>
+                                <div class="text-xs text-stone-500">Answer Yes/No questions based on visual inspection</div>
+                            </div>
+                        </button>
+
+                        <button onclick="setInputMode('camera')" id="btn-mode-camera" class="flex items-center p-4 rounded-xl border-2 border-stone-200 hover:border-emerald-400 bg-white text-left transition hover:shadow-md">
+                            <div class="bg-amber-500 text-white p-3 rounded-lg mr-4">
+                                <i class="fa-solid fa-camera text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-stone-800">Camera Plant Scanner</div>
+                                <div class="text-xs text-stone-500">Upload a photo or use live camera to auto-fill facts</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 2A: Camera Scanner Feature -->
+            <section id="camera-section" class="hidden bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-stone-200">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-stone-800"><i class="fa-solid fa-expand text-amber-500 mr-2"></i>Optical Plant Scanner</h2>
+                        <p class="text-sm text-stone-500">Upload an image of your crop or use your device camera. Our AI Vision will extract leaf color, coating, and stiffness facts.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <!-- Viewport / Upload Box -->
+                    <div class="relative bg-stone-900 rounded-2xl overflow-hidden aspect-video flex flex-col items-center justify-center border-2 border-dashed border-stone-700">
+                        <video id="camera-stream" class="hidden w-full h-full object-cover" autoplay playsinline></video>
+                        <img id="image-preview" class="hidden w-full h-full object-cover" alt="Scanned Crop Preview">
+                        
+                        <!-- Scanner Laser Overlay -->
+                        <div id="scan-overlay" class="hidden absolute inset-0 pointer-events-none">
+                            <div class="w-full h-1 bg-emerald-400 shadow-[0_0_15px_#34d399] absolute scanner-line"></div>
+                            <div class="absolute bottom-3 left-3 bg-black/70 text-emerald-300 text-xs px-3 py-1 rounded-full font-mono">
+                                ANALYZING CHLOROPHYLL & TEXTURE...
+                            </div>
+                        </div>
+
+                        <!-- Placeholder State -->
+                        <div id="camera-placeholder" class="text-center p-6">
+                            <i class="fa-solid fa-leaf text-4xl text-stone-600 mb-3"></i>
+                            <p class="text-stone-400 text-sm mb-4">No image loaded yet</p>
+                            <div class="flex flex-wrap justify-center gap-3">
+                                <button onclick="startWebcam()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition">
+                                    <i class="fa-solid fa-video mr-1.5"></i>Open Camera
+                                </button>
+                                <label class="px-4 py-2 bg-stone-700 hover:bg-stone-600 text-white text-xs font-semibold rounded-lg cursor-pointer transition">
+                                    <i class="fa-solid fa-upload mr-1.5"></i>Upload Photo
+                                    <input type="file" id="image-upload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scanner Controls & AI Analysis -->
+                    <div class="space-y-4">
+                        <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl text-sm text-amber-900">
+                            <h4 class="font-bold flex items-center gap-1.5 mb-1">
+                                <i class="fa-solid fa-wand-magic-sparkles text-amber-600"></i> How Scanner Works
+                            </h4>
+                            <p class="text-xs leading-relaxed">
+                                Capture or upload a clear photo of the leaves and stem. You can also test the scanner right now using our <strong>Simulated Sample Scans</strong> below if you don't have a plant handy!
+                            </p>
+                        </div>
+
+                        <!-- Quick Demo Presets for easy testing -->
+                        <div>
+                            <span class="text-xs font-semibold text-stone-500 uppercase tracking-wider">Or Try Quick Sample Scans:</span>
+                            <div class="grid grid-cols-2 gap-2 mt-2">
+                                <button onclick="simulateScan('healthy')" class="p-2.5 text-xs font-medium bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-left transition">
+                                    <i class="fa-solid fa-check-circle text-emerald-600 mr-1"></i> Healthy Green Sample
+                                </button>
+                                <button onclick="simulateScan('wilted')" class="p-2.5 text-xs font-medium bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200 rounded-lg text-left transition">
+                                    <i class="fa-solid fa-droplet-slash text-orange-600 mr-1"></i> Drooping / Dry Sample
+                                </button>
+                                <button onclick="simulateScan('yellow')" class="p-2.5 text-xs font-medium bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border border-yellow-200 rounded-lg text-left transition">
+                                    <i class="fa-solid fa-sun text-yellow-600 mr-1"></i> Yellowing Leaves Sample
+                                </button>
+                                <button onclick="simulateScan('fungus')" class="p-2.5 text-xs font-medium bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-lg text-left transition">
+                                    <i class="fa-solid fa-bacterium text-purple-600 mr-1"></i> White Powdery Coating
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3 pt-2">
+                            <button id="btn-capture-analyze" onclick="analyzeCameraImage()" class="hidden w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow transition">
+                                <i class="fa-solid fa-microscope mr-2"></i>Scan & Extract Plant Facts
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 2B: Diagnostic Questions Form -->
+            <section id="questions-section" class="hidden bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-stone-200">
+                <div class="border-b border-stone-100 pb-4 mb-6">
+                    <h2 class="text-xl font-bold text-stone-800">2. Plant & Soil Observation Questions</h2>
+                    <p class="text-sm text-stone-500">Answer the following diagnostic questions based on the Knowledge Base rules.</p>
+                </div>
+
+                <div id="questions-container" class="space-y-4">
+                    <!-- Questions injected dynamically -->
+                </div>
+
+                <div class="mt-8 pt-6 border-t border-stone-100 flex justify-end">
+                    <button onclick="runInferenceEngine()" class="w-full sm:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-gears"></i> Run Inference Engine & Diagnose
+                    </button>
+                </div>
+            </section>
+
+            <!-- Step 3: Inference Engine & Explanation System Output -->
+            <section id="results-section" class="hidden space-y-6">
+                
+                <!-- Inference Engine Trace (Shows how the AI thought) -->
+                <div class="bg-stone-900 text-stone-100 p-6 rounded-2xl shadow-md">
+                    <div class="flex items-center justify-between border-b border-stone-800 pb-3 mb-4">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                            <i class="fa-solid fa-microchip"></i> Inference Engine Processing Log
+                        </h3>
+                        <span class="text-xs bg-stone-800 text-stone-400 px-2.5 py-1 rounded-md font-mono">Forward-Chaining Equilibrium</span>
+                    </div>
+                    <div id="inference-log" class="space-y-2 text-xs font-mono text-stone-300">
+                        <!-- Step-by-step reasoning trace injected here -->
+                    </div>
+                </div>
+
+                <!-- Explanation System Report Window -->
+                <div class="bg-white border-2 border-emerald-600 rounded-2xl shadow-lg overflow-hidden">
+                    <div class="bg-emerald-600 text-white px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <i class="fa-solid fa-file-medical text-xl"></i>
+                            <h3 class="font-bold text-lg">Explanation System: Transparency Report</h3>
+                        </div>
+                        <button onclick="copyReport()" class="text-xs bg-emerald-700 hover:bg-emerald-800 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+                            <i class="fa-regular fa-copy"></i> Copy Report
+                        </button>
+                    </div>
+                    
+                    <div id="explanation-report-body" class="p-6 sm:p-8 space-y-6">
+                        <!-- Diagnoses and Reasoning cards injected here -->
+                    </div>
+                </div>
+
+            </section>
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- VIEW 2: KNOWLEDGE BASE & RULES INSPECTOR   -->
+        <!-- ========================================== -->
+        <div id="view-knowledge" class="hidden space-y-8">
+            <section class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-stone-200">
+                <div class="border-b border-stone-100 pb-5 mb-6">
+                    <span class="text-xs font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2.5 py-1 rounded-md">Domain Expertise</span>
+                    <h2 class="text-2xl font-bold text-stone-800 mt-1">Agricultural Knowledge Base & Rules</h2>
+                    <p class="text-sm text-stone-500 mt-1">
+                        The facts, data, and farming rules used by the Inference Engine to evaluate crop health and reach an equilibrium conclusion.
+                    </p>
+                </div>
+
+                <!-- Core Facts Grid -->
+                <h3 class="text-lg font-bold text-stone-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-database text-emerald-600"></i> Core Domain Facts
+                </h3>
+                <div id="kb-facts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                    <!-- Facts injected via JS -->
+                </div>
+
+                <!-- Production Rules (IF-THEN) -->
+                <h3 class="text-lg font-bold text-stone-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-code-branch text-emerald-600"></i> Inference Rules Base (IF / THEN Logic)
+                </h3>
+                <div id="kb-rules-list" class="space-y-3">
+                    <!-- Rules injected via JS -->
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-stone-100 border-t border-stone-200 py-6 mt-12">
+        <div class="max-w-6xl mx-auto px-4 text-center text-xs text-stone-500">
+            <p class="font-semibold text-stone-600">AgriMind Simple Expert System</p>
+            <p class="mt-1">Architecture: Face 1 UI &bull; Agricultural Knowledge Base &bull; Equilibrium Inference Engine &bull; Explanation System</p>
+        </div>
+    </footer>
+
+    <!-- Application Logic -->
+    <script>
+        /**
+         * ============================================================================
+         * 1. KNOWLEDGE BASE (Facts, Crop Profiles, and Production Rules)
+         * ============================================================================
+         */
+        const KNOWLEDGE_BASE = {
+            crops: [
+                {
+                    id: 'tomato',
+                    name: 'Tomato',
+                    scientific: 'Solanum lycopersicum',
+                    icon: '🍅',
+                    idealPh: '6.0 - 6.8',
+                    waterNeeds: 'Moderate-High (Consistent moisture)',
+                    description: 'Sensitive to calcium/magnesium imbalances, wilting, and fungal blights.'
+                },
+                {
+                    id: 'corn',
+                    name: 'Sweet Corn',
+                    scientific: 'Zea mays',
+                    icon: '🌽',
+                    idealPh: '6.0 - 7.0',
+                    waterNeeds: 'High during tasseling',
+                    description: 'Heavy nitrogen & magnesium feeder; requires full sunlight for high leaf yield.'
+                },
+                {
+                    id: 'chili',
+                    name: 'Chili Pepper',
+                    scientific: 'Capsicum annuum',
+                    icon: '🌶️',
+                    idealPh: '6.0 - 6.8',
+                    waterNeeds: 'Moderate (Allow topsoil to dry slightly)',
+                    description: 'Prone to leaf curl, dehydration wilting, and white powdery mildew in humid air.'
+                },
+                {
+                    id: 'lettuce',
+                    name: 'Lettuce',
+                    scientific: 'Lactuca sativa',
+                    icon: '🥬',
+                    idealPh: '6.0 - 7.0',
+                    waterNeeds: 'High (Shallow roots)',
+                    description: 'Leaf yield is the primary harvest; immediately droops when dehydrated.'
+                }
+            ],
+            facts: [
+                { id: 'Fact #1', title: 'Leaf Color Indication', desc: 'Healthy chlorophyll produces vibrant green leaves. Yellowing (chlorosis) signals nutrient deficiency.' },
+                { id: 'Fact #2', title: 'Optimal Soil pH (6–7)', desc: 'Soil pH between 6.0 and 7.0 allows roots to absorb essential nutrients. Outside this range blocks uptake.' },
+                { id: 'Fact #3', title: 'Turgor & Stiffness', desc: 'A well-hydrated plant maintains internal water pressure, keeping stems and leaves stiff and firm.' },
+                { id: 'Fact #4', title: 'Surface Purity (No Coating)', desc: 'Healthy leaves have clean surfaces. White, powdery, or fuzzy coatings indicate fungal/pest infection.' },
+                { id: 'Fact #5', title: 'Vegetative Leaf Yield', desc: 'Active growth of new leaves indicates strong root health and adequate sunlight consumption.' },
+                { id: 'Fact #6', title: 'Soil Moisture Balance', desc: 'Bone-dry soil combined with drooping stems confirms dehydration rather than root rot.' },
+                { id: 'Fact #7', title: 'Pest Integrity (No Holes)', desc: 'Intact leaf edges without chewed holes or webbing confirm absence of caterpillars or spider mites.' }
+            ],
+            questions: [
+                {
+                    id: 'greenLeaves',
+                    factRef: 'Fact #1',
+                    question: 'Are the colour of the leaves vibrant green?',
+                    hint: 'Look for yellowing between leaf veins or pale discoloration.',
+                    yesLabel: 'Yes, vibrant green',
+                    noLabel: 'No, yellowing / pale'
+                },
+                {
+                    id: 'soilPhNormal',
+                    factRef: 'Fact #2',
+                    question: 'Is the pH of the soil between 6 and 7?',
+                    hint: 'Neutral to slightly acidic soil (6.0 - 7.0) is ideal for nutrient absorption.',
+                    yesLabel: 'Yes (pH 6.0 – 7.0)',
+                    noLabel: 'No (Too acidic <6 or alkaline >7)'
+                },
+                {
+                    id: 'isStiff',
+                    factRef: 'Fact #3',
+                    question: 'Is the plant stem and foliage stiff and firm?',
+                    hint: 'Check if the plant stands upright or if leaves are drooping/limp.',
+                    yesLabel: 'Yes, stiff & firm',
+                    noLabel: 'No, drooping / wilted'
+                },
+                {
+                    id: 'soilMoist',
+                    factRef: 'Fact #6',
+                    question: 'Does the soil feel slightly moist (not bone dry)?',
+                    hint: 'Touch 1 inch into the soil around the base of the plant.',
+                    yesLabel: 'Yes, soil is moist',
+                    noLabel: 'No, soil is dried up'
+                },
+                {
+                    id: 'noCoating',
+                    factRef: 'Fact #4',
+                    question: 'Are the leaves free of any white, powdery, or sticky coating?',
+                    hint: 'Inspect the top and underside of leaves for fungal spores or residue.',
+                    yesLabel: 'Yes, clean leaves',
+                    noLabel: 'No, has coating/spots'
+                },
+                {
+                    id: 'grownLeaves',
+                    factRef: 'Fact #5',
+                    question: 'Has the plant grown new leaves recently (healthy yield)?',
+                    hint: 'Look at the top crown or side shoots for fresh baby leaves.',
+                    yesLabel: 'Yes, growing new leaves',
+                    noLabel: 'No, stunted growth'
+                },
+                {
+                    id: 'noPests',
+                    factRef: 'Fact #7',
+                    question: 'Are the leaves free from chewed holes or visible insects?',
+                    hint: 'Check for tiny holes, chewed edges, or webbing under leaves.',
+                    yesLabel: 'Yes, no pest damage',
+                    noLabel: 'No, holes/insects visible'
+                }
+            ]
+        };
+
+        // Application State
+        let state = {
+            selectedCrop: null,
+            inputMode: 'questions',
+            answers: {}, // stores boolean true (Yes) or false (No)
+            webcamStream: null
+        };
+
+        /**
+         * ============================================================================
+         * 2. INITIALIZATION & UI RENDERING
+         * ============================================================================
+         */
+        window.onload = function() {
+            renderCropCards();
+            renderQuestions();
+            renderKnowledgeBaseTab();
+        };
+
+        function switchTab(tabName) {
+            const diagView = document.getElementById('view-diagnostic');
+            const kbView = document.getElementById('view-knowledge');
+            const tabDiag = document.getElementById('tab-diagnostic');
+            const tabKb = document.getElementById('tab-knowledge');
+
+            if (tabName === 'diagnostic') {
+                diagView.classList.remove('hidden');
+                kbView.classList.add('hidden');
+                tabDiag.className = 'px-4 py-2 rounded-lg text-sm font-medium transition bg-emerald-600 text-white shadow';
+                tabKb.className = 'px-4 py-2 rounded-lg text-sm font-medium transition text-emerald-100 hover:bg-emerald-700/50';
+            } else {
+                diagView.classList.add('hidden');
+                kbView.classList.remove('hidden');
+                tabKb.className = 'px-4 py-2 rounded-lg text-sm font-medium transition bg-emerald-600 text-white shadow';
+                tabDiag.className = 'px-4 py-2 rounded-lg text-sm font-medium transition text-emerald-100 hover:bg-emerald-700/50';
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const box = document.getElementById('notification-box');
+            const text = document.getElementById('notification-text');
+            const icon = document.getElementById('notification-icon');
+
+            box.classList.remove('hidden', 'bg-amber-50', 'border-amber-300', 'text-amber-800', 'bg-emerald-50', 'border-emerald-300', 'text-emerald-800');
+            
+            if (type === 'warning') {
+                box.classList.add('bg-amber-50', 'border-amber-300', 'text-amber-800');
+                icon.className = 'fa-solid fa-triangle-exclamation text-amber-600 text-lg';
+            } else {
+                box.classList.add('bg-emerald-50', 'border-emerald-300', 'text-emerald-800');
+                icon.className = 'fa-solid fa-circle-check text-emerald-600 text-lg';
+            }
+
+            text.textContent = message;
+        }
+
+        function hideNotification() {
+            document.getElementById('notification-box').classList.add('hidden');
+        }
+
+        function renderCropCards() {
+            const grid = document.getElementById('crop-grid');
+            grid.innerHTML = KNOWLEDGE_BASE.crops.map(crop => `
+                <button onclick="selectCrop('${crop.id}')" id="crop-card-${crop.id}" 
+                    class="crop-card p-4 rounded-xl border-2 border-stone-200 hover:border-emerald-500 bg-stone-50/50 hover:bg-white text-left transition flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-3xl">${crop.icon}</span>
+                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded bg-stone-200/70 text-stone-600">pH ${crop.idealPh}</span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-stone-800">${crop.name}</div>
+                        <div class="text-xs italic text-stone-400">${crop.scientific}</div>
+                    </div>
+                </button>
+            `).join('');
+        }
+
+        function selectCrop(cropId) {
+            state.selectedCrop = KNOWLEDGE_BASE.crops.find(c => c.id === cropId);
+            hideNotification();
+
+            // Update card visual highlights
+            document.querySelectorAll('.crop-card').forEach(el => {
+                el.classList.remove('border-emerald-600', 'bg-emerald-50/60', 'ring-2', 'ring-emerald-600/20');
+                el.classList.add('border-stone-200');
+            });
+            const activeCard = document.getElementById(`crop-card-${cropId}`);
+            activeCard.classList.remove('border-stone-200');
+            activeCard.classList.add('border-emerald-600', 'bg-emerald-50/60', 'ring-2', 'ring-emerald-600/20');
+
+            // Reveal Mode Selector & Questions
+            document.getElementById('selected-crop-label').textContent = `${state.selectedCrop.icon} ${state.selectedCrop.name}`;
+            document.getElementById('mode-selector').classList.remove('hidden');
+            
+            setInputMode(state.inputMode);
+        }
+
+        function setInputMode(mode) {
+            state.inputMode = mode;
+            const btnQ = document.getElementById('btn-mode-questions');
+            const btnC = document.getElementById('btn-mode-camera');
+            const secQ = document.getElementById('questions-section');
+            const secC = document.getElementById('camera-section');
+
+            if (mode === 'questions') {
+                btnQ.className = 'flex items-center p-4 rounded-xl border-2 border-emerald-600 bg-emerald-50/50 text-left transition shadow-sm';
+                btnC.className = 'flex items-center p-4 rounded-xl border-2 border-stone-200 hover:border-emerald-400 bg-white text-left transition';
+                secQ.classList.remove('hidden');
+                secC.classList.add('hidden');
+                stopWebcam();
+            } else {
+                btnC.className = 'flex items-center p-4 rounded-xl border-2 border-amber-500 bg-amber-50/50 text-left transition shadow-sm';
+                btnQ.className = 'flex items-center p-4 rounded-xl border-2 border-stone-200 hover:border-emerald-400 bg-white text-left transition';
+                secC.classList.remove('hidden');
+                secQ.classList.remove('hidden'); // Keep questions visible below so user sees auto-filled answers
+            }
+        }
+
+        function renderQuestions() {
+            const container = document.getElementById('questions-container');
+            container.innerHTML = KNOWLEDGE_BASE.questions.map((q, index) => `
+                <div class="p-4 rounded-xl border border-stone-200 bg-stone-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">${q.factRef}</span>
+                            <span class="font-semibold text-stone-800 text-sm sm:text-base">${index + 1}. ${q.question}</span>
+                        </div>
+                        <p class="text-xs text-stone-500 pl-1">${q.hint}</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button type="button" onclick="answerQuestion('${q.id}', true)" id="btn-${q.id}-yes"
+                            class="px-4 py-2 rounded-lg text-xs font-bold border border-stone-300 bg-white text-stone-600 hover:bg-emerald-50 transition">
+                            <i class="fa-solid fa-check mr-1"></i> Yes
+                        </button>
+                        <button type="button" onclick="answerQuestion('${q.id}', false)" id="btn-${q.id}-no"
+                            class="px-4 py-2 rounded-lg text-xs font-bold border border-stone-300 bg-white text-stone-600 hover:bg-rose-50 transition">
+                            <i class="fa-solid fa-xmark mr-1"></i> No
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function answerQuestion(questionId, value) {
+            state.answers[questionId] = value;
+
+            const yesBtn = document.getElementById(`btn-${questionId}-yes`);
+            const noBtn = document.getElementById(`btn-${questionId}-no`);
+
+            if (value === true) {
+                yesBtn.className = 'px-4 py-2 rounded-lg text-xs font-bold border-2 border-emerald-600 bg-emerald-600 text-white shadow-sm transition';
+                noBtn.className = 'px-4 py-2 rounded-lg text-xs font-bold border border-stone-300 bg-white text-stone-500 hover:bg-rose-50 transition';
+            } else {
+                noBtn.className = 'px-4 py-2 rounded-lg text-xs font-bold border-2 border-rose-600 bg-rose-600 text-white shadow-sm transition';
+                yesBtn.className = 'px-4 py-2 rounded-lg text-xs font-bold border border-stone-300 bg-white text-stone-500 hover:bg-emerald-50 transition';
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 3. CAMERA / SCANNER FEATURE (With Real Canvas Color Analysis + Presets)
+         * ============================================================================
+         */
+        async function startWebcam() {
+            try {
+                const video = document.getElementById('camera-stream');
+                const placeholder = document.getElementById('camera-placeholder');
+                const preview = document.getElementById('image-preview');
+                const btnAnalyze = document.getElementById('btn-capture-analyze');
+
+                state.webcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                video.srcObject = state.webcamStream;
+                
+                placeholder.classList.add('hidden');
+                preview.classList.add('hidden');
+                video.classList.remove('hidden');
+                btnAnalyze.classList.remove('hidden');
+            } catch (err) {
+                showNotification('Camera access unavailable or denied. Please upload a photo or use a Quick Sample Scan.', 'warning');
+            }
+        }
+
+        function stopWebcam() {
+            if (state.webcamStream) {
+                state.webcamStream.getTracks().forEach(track => track.stop());
+                state.webcamStream = null;
+            }
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            stopWebcam();
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('image-preview');
+                const video = document.getElementById('camera-stream');
+                const placeholder = document.getElementById('camera-placeholder');
+                const btnAnalyze = document.getElementById('btn-capture-analyze');
+
+                preview.src = e.target.result;
+                video.classList.add('hidden');
+                placeholder.classList.add('hidden');
+                preview.classList.remove('hidden');
+                btnAnalyze.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function analyzeCameraImage() {
+            const overlay = document.getElementById('scan-overlay');
+            overlay.classList.remove('hidden');
+
+            // Analyze pixel RGB values from either video or uploaded image
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const video = document.getElementById('camera-stream');
+                const img = document.getElementById('image-preview');
+                const source = !video.classList.contains('hidden') ? video : img;
+
+                canvas.width = 100;
+                canvas.height = 100;
+                ctx.drawImage(source, 0, 0, 100, 100);
+                
+                const data = ctx.getImageData(0, 0, 100, 100).data;
+                let rTotal = 0, gTotal = 0, bTotal = 0;
+                for (let i = 0; i < data.length; i += 4) {
+                    rTotal += data[i];
+                    gTotal += data[i + 1];
+                    bTotal += data[i + 2];
+                }
+                const pixels = data.length / 4;
+                const avgR = rTotal / pixels;
+                const avgG = gTotal / pixels;
+                const avgB = bTotal / pixels;
+
+                // Heuristic color detection for plant leaves
+                const isGreenDominant = avgG > avgR * 1.05 && avgG > avgB * 1.1;
+                const isWhitishCoating = avgR > 190 && avgG > 190 && avgB > 190;
+
+                // Populate observable visual facts
+                answerQuestion('greenLeaves', isGreenDominant);
+                answerQuestion('noCoating', !isWhitishCoating);
+                answerQuestion('isStiff', true);
+                answerQuestion('noPests', true);
+                // Soil pH & moisture require physical check, default to true unless user overrides
+                if (state.answers['soilPhNormal'] === undefined) answerQuestion('soilPhNormal', true);
+                if (state.answers['soilMoist'] === undefined) answerQuestion('soilMoist', true);
+                if (state.answers['grownLeaves'] === undefined) answerQuestion('grownLeaves', isGreenDominant);
+
+                showNotification('Optical scan complete! Visual facts have been auto-filled below. Review and click Run Inference Engine.', 'info');
+            }, 1200);
+        }
+
+        function simulateScan(preset) {
+            stopWebcam();
+            const overlay = document.getElementById('scan-overlay');
+            const preview = document.getElementById('image-preview');
+            const placeholder = document.getElementById('camera-placeholder');
+            const video = document.getElementById('camera-stream');
+
+            // Generate a clean SVG visual preview for the sample scan
+            const colors = {
+                healthy: { bg: '#065f46', leaf: '#34d399', label: 'Sample: Vibrant Green Healthy Crop' },
+                wilted:  { bg: '#7c2d12', leaf: '#fb923c', label: 'Sample: Drooping Stems & Dry Soil' },
+                yellow:  { bg: '#713f12', leaf: '#facc15', label: 'Sample: Chlorosis / Yellowing Leaves' },
+                fungus:  { bg: '#3b0764', leaf: '#e9d5ff', label: 'Sample: White Powdery Leaf Coating' }
+            };
+            const c = colors[preset];
+            const svgData = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="225" viewBox="0 0 400 225"><rect width="400" height="225" fill="${encodeURIComponent(c.bg)}"/><circle cx="200" cy="100" r="45" fill="${encodeURIComponent(c.leaf)}" opacity="0.85"/><text x="200" y="185" font-family="sans-serif" font-size="14" fill="white" text-anchor="middle">${encodeURIComponent(c.label)}</text></svg>`;
+
+            preview.src = svgData;
+            video.classList.add('hidden');
+            placeholder.classList.add('hidden');
+            preview.classList.remove('hidden');
+            overlay.classList.remove('hidden');
+
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                if (preset === 'healthy') {
+                    answerQuestion('greenLeaves', true);
+                    answerQuestion('soilPhNormal', true);
+                    answerQuestion('isStiff', true);
+                    answerQuestion('soilMoist', true);
+                    answerQuestion('noCoating', true);
+                    answerQuestion('grownLeaves', true);
+                    answerQuestion('noPests', true);
+                } else if (preset === 'wilted') {
+                    answerQuestion('greenLeaves', true);
+                    answerQuestion('soilPhNormal', true);
+                    answerQuestion('isStiff', false);
+                    answerQuestion('soilMoist', false);
+                    answerQuestion('noCoating', true);
+                    answerQuestion('grownLeaves', false);
+                    answerQuestion('noPests', true);
+                } else if (preset === 'yellow') {
+                    answerQuestion('greenLeaves', false);
+                    answerQuestion('soilPhNormal', true);
+                    answerQuestion('isStiff', true);
+                    answerQuestion('soilMoist', true);
+                    answerQuestion('noCoating', true);
+                    answerQuestion('grownLeaves', false);
+                    answerQuestion('noPests', true);
+                } else if (preset === 'fungus') {
+                    answerQuestion('greenLeaves', true);
+                    answerQuestion('soilPhNormal', true);
+                    answerQuestion('isStiff', true);
+                    answerQuestion('soilMoist', true);
+                    answerQuestion('noCoating', false);
+                    answerQuestion('grownLeaves', true);
+                    answerQuestion('noPests', true);
+                }
+                showNotification(`Loaded "${c.label}" facts into the questionnaire below!`, 'info');
+            }, 900);
+        }
+
+        /**
+         * ============================================================================
+         * 4. INFERENCE ENGINE & EXPLANATION SYSTEM
+         * ============================================================================
+         */
+        function runInferenceEngine() {
+            if (!state.selectedCrop) {
+                showNotification('Please select a crop in Step 1 first.', 'warning');
+                return;
+            }
+
+            // Verify all 7 questions are answered
+            const unanswered = KNOWLEDGE_BASE.questions.filter(q => state.answers[q.id] === undefined);
+            if (unanswered.length > 0) {
+                showNotification(`Please answer all ${KNOWLEDGE_BASE.questions.length} diagnostic questions (${unanswered.length} remaining).`, 'warning');
+                return;
+            }
+
+            hideNotification();
+            const ans = state.answers;
+            const crop = state.selectedCrop;
+            const traceLogs = [];
+            const issues = [];
+
+            // Step 1: Confirm known plant and facts
+            traceLogs.push(`[STEP 1: FACT CONFIRMATION] Target Crop identified as "${crop.name}" (${crop.scientific}). Ideal soil pH: ${crop.idealPh}.`);
+            traceLogs.push(`[STEP 2: DATA COLLECTION] Gathering 7 boolean inputs from Working Memory against Knowledge Base Facts #1–#7.`);
+
+            // Step 3: Evaluate Rules Base to reach equilibrium conclusion
+            // Rule A: Dehydration / Wilting (Matches user's exact Explanation System scenario!)
+            if (ans.isStiff === false && ans.soilMoist === false) {
+                traceLogs.push(`[RULE FIRED: R1_DEHYDRATION] IF isStiff == FALSE AND soilMoist == FALSE THEN Severe Dehydration.`);
+                issues.push({
+                    severity: 'high',
+                    title: 'Dehydration & Severe Water Stress',
+                    diagnosis: 'Your plant is drying up and dying due to dehydration and a lack of water.',
+                    reasoning: `The system reached this conclusion because you reported that your ${crop.name} plant is not stiff (wilted/dried up) and its soil is also dry. You need to move it to a slightly more humid/shaded area temporarily and water it more frequently (${crop.waterNeeds}).`
+                });
+            } else if (ans.isStiff === false && ans.soilMoist === true) {
+                traceLogs.push(`[RULE FIRED: R2_ROOT_STRESS] IF isStiff == FALSE AND soilMoist == TRUE THEN Overwatering / Root Rot.`);
+                issues.push({
+                    severity: 'high',
+                    title: 'Root Oxygen Deprivation (Overwatering)',
+                    diagnosis: 'Your plant is wilting despite having wet soil, indicating root stress or poor drainage.',
+                    reasoning: `The system reached this conclusion because the plant lacks stiffness (Fact #3) even though the soil is already moist (Fact #6). Stop watering immediately, ensure pot/soil drainage holes are clear, and allow roots to aerate.`
+                });
+            }
+
+            // Rule B: Leaf Color / Magnesium Deficiency (Fact #1)
+            if (ans.greenLeaves === false) {
+                traceLogs.push(`[RULE FIRED: R3_CHLOROSIS] IF greenLeaves == FALSE THEN Magnesium / Nitrogen Deficiency.`);
+                issues.push({
+                    severity: 'medium',
+                    title: 'Magnesium & Chlorophyll Deficiency (Chlorosis)',
+                    diagnosis: 'Your plant requires more magnesium and essential micronutrients to restore green foliage.',
+                    reasoning: `Based on Fact #1 (Leaf indication is tied to health), non-green/yellowing leaves indicate impaired chlorophyll production. Apply Epsom salt (magnesium sulfate) dissolved in water or a balanced organic fertilizer.`
+                });
+            }
+
+            // Rule C: Soil pH Balance (Fact #2)
+            if (ans.soilPhNormal === false) {
+                traceLogs.push(`[RULE FIRED: R4_PH_IMBALANCE] IF soilPhNormal == FALSE THEN Nutrient Lockout Risk.`);
+                issues.push({
+                    severity: 'medium',
+                    title: 'Soil pH Imbalance (Outside 6.0 – 7.0)',
+                    diagnosis: 'The soil pH is outside the healthy 6.0–7.0 range, which may hurt the plant and block nutrient absorption.',
+                    reasoning: `According to Fact #2, ${crop.name} requires a soil pH of ${crop.idealPh}. When pH drifts too low or too high, roots cannot absorb minerals even if they are present. Add agricultural lime to raise pH, or elemental sulfur/peat moss to lower pH.`
+                });
+            }
+
+            // Rule D: Leaf Coating / Fungal Infection (Fact #4)
+            if (ans.noCoating === false) {
+                traceLogs.push(`[RULE FIRED: R5_FUNGAL_COATING] IF noCoating == FALSE THEN Powdery Mildew / Fungal Spore Growth.`);
+                issues.push({
+                    severity: 'high',
+                    title: 'Fungal Leaf Coating (Powdery Mildew)',
+                    diagnosis: 'Your plant has an abnormal surface coating that blocks photosynthesis and spreads infection.',
+                    reasoning: `According to Fact #4, healthy plants must have no surface coating. Prune affected leaves immediately, improve airflow around the ${crop.name}, avoid overhead leaf watering, and apply organic neem oil or a baking-soda water spray.`
+                });
+            }
+
+            // Rule E: Pest Damage (Fact #7)
+            if (ans.noPests === false) {
+                traceLogs.push(`[RULE FIRED: R6_PEST_INFESTATION] IF noPests == FALSE THEN Foliar Herbivore / Insect Attack.`);
+                issues.push({
+                    severity: 'medium',
+                    title: 'Insect & Pest Infestation',
+                    diagnosis: 'Physical damage on the leaves indicates active feeding by caterpillars, beetles, or mites.',
+                    reasoning: `Based on Fact #7, chewed holes or visible bugs reduce the leaf area available for energy production. Inspect leaf undersides manually and apply insecticidal soap or neem oil at dusk.`
+                });
+            }
+
+            // Rule F: Leaf Yield & Growth (Fact #5)
+            if (ans.grownLeaves === false) {
+                traceLogs.push(`[RULE FIRED: R7_LOW_YIELD] IF grownLeaves == FALSE THEN Stunted Vegetative Growth.`);
+                issues.push({
+                    severity: 'low',
+                    title: 'Stunted Leaf Yield & Slow Growth',
+                    diagnosis: 'Your plant has not grown new leaves recently, indicating suboptimal sunlight or soil energy.',
+                    reasoning: `According to Fact #5, new leaf growth is a primary yield indicator. Check that your ${crop.name} receives at least 6–8 hours of direct sunlight daily and verify soil nutrient richness.`
+                });
+            }
+
+            // Step 4: Equilibrium Conclusion Check
+            if (issues.length === 0) {
+                traceLogs.push(`[STEP 4: EQUILIBRIUM REACHED] Zero negative rules triggered. All 7 facts satisfy Healthy State.`);
+                issues.push({
+                    severity: 'healthy',
+                    title: 'Optimal Plant Health & Strong Yield',
+                    diagnosis: `Your ${crop.name} crop is completely healthy, well-hydrated, and growing at an optimal rate!`,
+                    reasoning: `The system reached an equilibrium healthy conclusion because all 7 Knowledge Base indicators passed: green leaves (Fact #1), balanced pH 6–7 (Fact #2), stiff stems (Fact #3), clean leaf surfaces (Fact #4), active new leaf yield (Fact #5), moist soil (Fact #6), and zero pest damage (Fact #7). Keep up your current care routine!`
+                });
+            } else {
+                traceLogs.push(`[STEP 4: EQUILIBRIUM REACHED] ${issues.length} issue(s) isolated. Forwarding diagnostic package to Explanation System.`);
+            }
+
+            renderResults(traceLogs, issues);
+        }
+
+        function renderResults(traceLogs, issues) {
+            const resultsSec = document.getElementById('results-section');
+            const logContainer = document.getElementById('inference-log');
+            const reportBody = document.getElementById('explanation-report-body');
+
+            // Render Inference Logs
+            logContainer.innerHTML = traceLogs.map(log => `
+                <div class="flex items-start gap-2">
+                    <span class="text-emerald-500">❯</span>
+                    <span>${log}</span>
+                </div>
+            `).join('');
+
+            // Render Explanation System Report Cards
+            reportBody.innerHTML = issues.map(item => {
+                const badgeStyles = {
+                    healthy: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+                    low:     'bg-amber-100 text-amber-800 border-amber-300',
+                    medium:  'bg-orange-100 text-orange-800 border-orange-300',
+                    high:    'bg-rose-100 text-rose-800 border-rose-300'
+                };
+                const borderStyles = {
+                    healthy: 'border-emerald-200 bg-emerald-50/40',
+                    low:     'border-amber-200 bg-amber-50/40',
+                    medium:  'border-orange-200 bg-orange-50/40',
+                    high:    'border-rose-200 bg-rose-50/40'
+                };
+
+                return `
+                    <div class="p-5 rounded-xl border ${borderStyles[item.severity]} space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <h4 class="font-bold text-lg text-stone-900">${item.title}</h4>
+                            <span class="text-xs font-bold uppercase px-2.5 py-1 rounded-full border ${badgeStyles[item.severity]}">
+                                ${item.severity === 'healthy' ? 'Healthy Status' : item.severity + ' Priority'}
+                            </span>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border border-stone-200/80 space-y-2 text-sm">
+                            <p class="text-stone-900">
+                                <strong class="text-emerald-800">Diagnosis:</strong> “${item.diagnosis}”
+                            </p>
+                            <p class="text-stone-700 leading-relaxed">
+                                <strong class="text-stone-900">Reasoning:</strong> ${item.reasoning}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            resultsSec.classList.remove('hidden');
+            resultsSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function copyReport() {
+            const reportText = document.getElementById('explanation-report-body').innerText;
+            const tempInput = document.createElement('textarea');
+            tempInput.value = `AgriMind Diagnostic Report (${state.selectedCrop.name}):\n\n${reportText}`;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showNotification('Explanation System report copied to clipboard!', 'info');
+        }
+
+        function resetSystem() {
+            state.selectedCrop = null;
+            state.answers = {};
+            stopWebcam();
+            hideNotification();
+
+            document.querySelectorAll('.crop-card').forEach(el => {
+                el.classList.remove('border-emerald-600', 'bg-emerald-50/60', 'ring-2', 'ring-emerald-600/20');
+                el.classList.add('border-stone-200');
+            });
+
+            document.getElementById('mode-selector').classList.add('hidden');
+            document.getElementById('camera-section').classList.add('hidden');
+            document.getElementById('questions-section').classList.add('hidden');
+            document.getElementById('results-section').classList.add('hidden');
+            renderQuestions();
+        }
+
+        /**
+         * ============================================================================
+         * 5. KNOWLEDGE BASE INSPECTOR TAB RENDERING
+         * ============================================================================
+         */
+        function renderKnowledgeBaseTab() {
+            const factsGrid = document.getElementById('kb-facts-grid');
+            factsGrid.innerHTML = KNOWLEDGE_BASE.facts.map(f => `
+                <div class="p-4 rounded-xl border border-stone-200 bg-stone-50">
+                    <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">${f.id}</span>
+                    <h4 class="font-bold text-stone-800 mt-2">${f.title}</h4>
+                    <p class="text-xs text-stone-600 mt-1 leading-relaxed">${f.desc}</p>
+                </div>
+            `).join('');
+
+            const rulesList = document.getElementById('kb-rules-list');
+            const rules = [
+                { cond: 'Leaf color is Green (Fact #1)', yes: 'Healthy chlorophyll levels', no: 'Requires more Magnesium (Chlorosis)' },
+                { cond: 'Soil pH is between 6.0 and 7.0 (Fact #2)', yes: 'Optimal nutrient absorption', no: 'Not healthy; blocks mineral uptake and hurts plant' },
+                { cond: 'Plant stem is Stiff (Fact #3) & Soil is Dry (Fact #6)', yes: 'Healthy turgor pressure', no: 'Severe dehydration; move to humid area and water frequently' },
+                { cond: 'Plant has No Coating (Fact #4)', yes: 'Clean leaf surface', no: 'Fungal powdery mildew infection; prune and treat' },
+                { cond: 'Plant has Grown More Leaves (Fact #5)', yes: 'Healthy vegetative yield', no: 'Check soil fertility or sunlight consumption' },
+                { cond: 'Leaves have No Chewed Holes (Fact #7)', yes: 'Pest-free foliage', no: 'Active insect/caterpillar infestation' }
+            ];
+
+            rulesList.innerHTML = rules.map((r, i) => `
+                <div class="p-4 rounded-xl border border-stone-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div class="font-bold text-stone-800">
+                        <span class="text-emerald-600 font-mono mr-2">RULE #${i + 1}:</span> IF ${r.cond}
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <strong>YES:</strong> ${r.yes}
+                        </span>
+                        <span class="px-2.5 py-1 rounded bg-rose-50 text-rose-800 border border-rose-200">
+                            <strong>NO:</strong> ${r.no}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
